@@ -1,0 +1,10 @@
+# No build dirs
+*/BUILD/*
+*/BUILDROOT/*
+# No archives
+*.rpm
+*gz
+*bz2
+*zip
+# No sig files
+*.asc

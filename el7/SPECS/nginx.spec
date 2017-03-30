@@ -7,6 +7,8 @@
 %endif
 
 %global with_aio 1
+%global with_headers_more 1
+%global headers_more_version 0.32
 
 %if 0%{?fedora} > 22
 %global with_mailcap_mimetypes 1
@@ -14,7 +16,7 @@
 
 Name:              nginx
 Epoch:             1
-Version:           1.10.2
+Version:           1.10.3
 Release:           1%{?dist}
 
 Summary:           A high performance web server and reverse proxy server
@@ -38,6 +40,7 @@ Source103:         404.html
 Source104:         50x.html
 Source200:         README.dynamic
 Source210:         UPGRADE-NOTES-1.6-to-1.10
+Source1000:        https://github.com/openresty/headers-more-nginx-module/archive/v%{headers_more_version}.tar.gz
 
 # removes -Werror in upstream build scripts.  -Werror conflicts with
 # -D_FORTIFY_SOURCE=2 causing warnings to turn into errors.
@@ -86,6 +89,10 @@ Requires:          nginx-mod-http-perl = %{epoch}:%{version}-%{release}
 Requires:          nginx-mod-http-xslt-filter = %{epoch}:%{version}-%{release}
 Requires:          nginx-mod-mail = %{epoch}:%{version}-%{release}
 Requires:          nginx-mod-stream = %{epoch}:%{version}-%{release}
+
+%if 0%{?with_headers_more}
+Requires:          nginx-mod-headers-more = %{epoch}:%{version}-%{release}
+%endif
 
 %description all-modules
 %{summary}.
@@ -168,12 +175,32 @@ Requires:          nginx
 %description mod-stream
 %{summary}.
 
+%if 0%{?with_headers_more}
+%package           mod-headers-more
+Summary:           Set and clear input and output headers...more than "add"!
+Group:             System Environment/Daemons
+# BSD License (two clause)
+# http://www.freebsd.org/copyright/freebsd-license.html
+License:           BSD
+Requires:          %{name}%{?_isa} = %{version}-%{release}
+Provides:          %{name}-mod(http_headers_more_filter) = %{version}-%{release}
+Provides:          %{name}-mod(http_headers_more_filter)%{?_isa} = %{version}-%{release}
+
+%description mod-headers-more
+ngx_headers_more allows you to add, set, or clear any output or input
+header that you specify.
+%endif
+
 
 %prep
 %setup -q
 %patch0 -p0
 cp %{SOURCE200} .
 cp %{SOURCE210} .
+
+%if 0%{?with_headers_more}
+%setup -q -n %{name}-%{version} -T -D -a 1000
+%endif
 
 %if 0%{?rhel} < 8
 sed -i -e 's#KillMode=.*#KillMode=process#g' %{SOURCE10}
@@ -234,6 +261,9 @@ export DESTDIR=%{buildroot}
     --with-stream_ssl_module \
 %if 0%{?with_gperftools}
     --with-google_perftools_module \
+%endif
+%if 0%{?with_headers_more}
+    --add-dynamic-module=./headers-more-nginx-module-%{headers_more_version} \
 %endif
     --with-debug \
     --with-cc-opt="%{optflags} $(pcre-config --cflags)" \
@@ -302,6 +332,10 @@ echo 'load_module "%{_libdir}/nginx/modules/ngx_mail_module.so";' \
     > %{buildroot}%{_datadir}/nginx/modules/mod-mail.conf
 echo 'load_module "%{_libdir}/nginx/modules/ngx_stream_module.so";' \
     > %{buildroot}%{_datadir}/nginx/modules/mod-stream.conf
+%if 0%{?with_headers_more}
+echo 'load_module "%{_libdir}/nginx/modules/ngx_http_headers_more_filter_module.so";' \
+    > %{buildroot}%{_datadir}/nginx/modules/mod-headers-more.conf
+%endif
 
 %pre filesystem
 getent group %{nginx_user} > /dev/null || groupadd -r %{nginx_user}
@@ -342,6 +376,14 @@ fi
 if [ $1 -eq 1 ]; then
     /usr/bin/systemctl reload nginx.service >/dev/null 2>&1 || :
 fi
+
+%if 0%{?with_headers_more}
+%post mod-headers-more
+if [ $1 -eq 1 ]; then
+    /usr/bin/systemctl reload nginx.service >/dev/null 2>&1 || :
+fi
+%endif
+
 
 %preun
 %systemd_preun nginx.service
@@ -427,8 +469,18 @@ fi
 %{_datadir}/nginx/modules/mod-stream.conf
 %{_libdir}/nginx/modules/ngx_stream_module.so
 
+%if 0%{?with_headers_more}
+%files mod-headers-more
+%{_datadir}/nginx/modules/mod-headers-more.conf
+%{_libdir}/nginx/modules/ngx_http_headers_more_filter_module.so
+%endif
+
 
 %changelog
+* Thu Mar 30 2017 Joseph Tate <joseph@crunch.io> - 1:1.10.3-1
+- update to upstream release 1.10.3
+- build and package headers-more module
+
 * Mon Oct 31 2016 Jamie Nguyen <jamielinux@fedoraproject.org> - 1:1.10.2-1
 - update to upstream release 1.10.2
 

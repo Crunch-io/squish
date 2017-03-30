@@ -1,0 +1,18 @@
+%packager               Your Name <youremail@example.com>
+%_signature             gpg
+%_gpg_path %(echo "%HOME")/.gnupg
+%_gpg_name Your Name (Your comment) <youremail@example.com>
+
+
+
+%_topdir                %(echo "$HOME")/path/to/squish/el7/
+%_tmppath               /var/tmp/rpmbuild
+
+%_rpmtopdir             %{_topdir}
+%_builddir              %{_topdir}/BUILD
+%_rpmdir                %{_rpmtopdir}/RPMS
+%_sourcedir             %{_rpmtopdir}/SOURCES/%{name}
+%_specdir               %{_rpmtopdir}/SPECS
+%_srcrpmdir             %{_rpmtopdir}/SRPMS
+
+%dist                   %{?dist}.crunch
